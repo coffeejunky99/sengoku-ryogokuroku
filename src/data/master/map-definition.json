@@ -1,0 +1,262 @@
+{
+  "logicalWidth": 1600,
+  "logicalHeight": 1200,
+  "origin": "top-left",
+  "xAxis": "positive-right",
+  "yAxis": "positive-down",
+  "coordinateUnit": "logical-pixel",
+  "contentPadding": 80,
+  "initialCameraCenter": {
+    "x": 800,
+    "y": 600
+  },
+  "initialZoom": 0.75,
+  "minimumZoom": 0.5,
+  "maximumZoom": 1.8,
+  "clans": [
+    {
+      "id": "clan_takeda",
+      "name": "武田家",
+      "color": "#B3261E",
+      "crestAssetKey": "crest_takeda_bishi",
+      "identificationSymbol": "武田菱",
+      "capitalCastleId": "castle_tsutsujigasaki",
+      "playable": true
+    },
+    {
+      "id": "clan_uesugi",
+      "name": "上杉家",
+      "color": "#2563EB",
+      "crestAssetKey": "crest_uesugi_take_suzume",
+      "identificationSymbol": "竹に雀",
+      "capitalCastleId": "castle_kasugayama",
+      "playable": true
+    },
+    {
+      "id": "clan_hojo",
+      "name": "北条家",
+      "color": "#7C3AED",
+      "crestAssetKey": "crest_hojo_mitsu_uroko",
+      "identificationSymbol": "三つ鱗",
+      "capitalCastleId": "castle_odawara",
+      "playable": true
+    },
+    {
+      "id": "clan_kokujin",
+      "name": "国人勢力",
+      "color": "#64748B",
+      "crestAssetKey": "crest_kokujin_maru",
+      "identificationSymbol": "丸印",
+      "capitalCastleId": "castle_katsurao",
+      "playable": false
+    }
+  ],
+  "castles": [
+    {
+      "id": "castle_kasugayama",
+      "name": "春日山城",
+      "region": "越後",
+      "position": {
+        "x": 760,
+        "y": 150
+      },
+      "initialOwnerClanId": "clan_uesugi"
+    },
+    {
+      "id": "castle_sakado",
+      "name": "坂戸城",
+      "region": "越後",
+      "position": {
+        "x": 940,
+        "y": 300
+      },
+      "initialOwnerClanId": "clan_uesugi"
+    },
+    {
+      "id": "castle_kaizu",
+      "name": "海津城",
+      "region": "北信濃",
+      "position": {
+        "x": 720,
+        "y": 430
+      },
+      "initialOwnerClanId": "clan_takeda"
+    },
+    {
+      "id": "castle_katsurao",
+      "name": "葛尾城",
+      "region": "北信濃",
+      "position": {
+        "x": 570,
+        "y": 440
+      },
+      "initialOwnerClanId": "clan_kokujin"
+    },
+    {
+      "id": "castle_fukashi",
+      "name": "深志城",
+      "region": "中信濃",
+      "position": {
+        "x": 450,
+        "y": 620
+      },
+      "initialOwnerClanId": "clan_takeda"
+    },
+    {
+      "id": "castle_tsutsujigasaki",
+      "name": "躑躅ヶ崎館",
+      "region": "甲斐",
+      "position": {
+        "x": 650,
+        "y": 850
+      },
+      "initialOwnerClanId": "clan_takeda"
+    },
+    {
+      "id": "castle_minowa",
+      "name": "箕輪城",
+      "region": "上野",
+      "position": {
+        "x": 1030,
+        "y": 570
+      },
+      "initialOwnerClanId": "clan_kokujin"
+    },
+    {
+      "id": "castle_hachigata",
+      "name": "鉢形城",
+      "region": "武蔵",
+      "position": {
+        "x": 1160,
+        "y": 750
+      },
+      "initialOwnerClanId": "clan_hojo"
+    },
+    {
+      "id": "castle_odawara",
+      "name": "小田原城",
+      "region": "相模",
+      "position": {
+        "x": 1000,
+        "y": 1010
+      },
+      "initialOwnerClanId": "clan_hojo"
+    },
+    {
+      "id": "castle_matsuyama",
+      "name": "松山城",
+      "region": "武蔵",
+      "position": {
+        "x": 1290,
+        "y": 620
+      },
+      "initialOwnerClanId": "clan_hojo"
+    }
+  ],
+  "routes": [
+    {
+      "id": "route_kasugayama_sakado",
+      "fromCastleId": "castle_kasugayama",
+      "toCastleId": "castle_sakado",
+      "distance": 220,
+      "terrain": "mountain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_kasugayama_kaizu",
+      "fromCastleId": "castle_kasugayama",
+      "toCastleId": "castle_kaizu",
+      "distance": 300,
+      "terrain": "mountain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_sakado_minowa",
+      "fromCastleId": "castle_sakado",
+      "toCastleId": "castle_minowa",
+      "distance": 310,
+      "terrain": "mountain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_kaizu_katsurao",
+      "fromCastleId": "castle_kaizu",
+      "toCastleId": "castle_katsurao",
+      "distance": 160,
+      "terrain": "mountain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_kaizu_fukashi",
+      "fromCastleId": "castle_kaizu",
+      "toCastleId": "castle_fukashi",
+      "distance": 260,
+      "terrain": "plain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_katsurao_fukashi",
+      "fromCastleId": "castle_katsurao",
+      "toCastleId": "castle_fukashi",
+      "distance": 220,
+      "terrain": "mountain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_fukashi_tsutsujigasaki",
+      "fromCastleId": "castle_fukashi",
+      "toCastleId": "castle_tsutsujigasaki",
+      "distance": 310,
+      "terrain": "mountain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_tsutsujigasaki_odawara",
+      "fromCastleId": "castle_tsutsujigasaki",
+      "toCastleId": "castle_odawara",
+      "distance": 410,
+      "terrain": "mountain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_kaizu_minowa",
+      "fromCastleId": "castle_kaizu",
+      "toCastleId": "castle_minowa",
+      "distance": 350,
+      "terrain": "mountain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_minowa_hachigata",
+      "fromCastleId": "castle_minowa",
+      "toCastleId": "castle_hachigata",
+      "distance": 210,
+      "terrain": "plain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_minowa_matsuyama",
+      "fromCastleId": "castle_minowa",
+      "toCastleId": "castle_matsuyama",
+      "distance": 270,
+      "terrain": "plain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_hachigata_matsuyama",
+      "fromCastleId": "castle_hachigata",
+      "toCastleId": "castle_matsuyama",
+      "distance": 180,
+      "terrain": "plain",
+      "isBidirectional": true
+    },
+    {
+      "id": "route_hachigata_odawara",
+      "fromCastleId": "castle_hachigata",
+      "toCastleId": "castle_odawara",
+      "distance": 300,
+      "terrain": "plain",
+      "isBidirectional": true
+    }
+  ]
+}
