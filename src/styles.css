@@ -33,7 +33,8 @@ body {
 
 .app-shell {
   display: grid;
-  grid-template-rows: auto minmax(20rem, 1fr);
+  height: 100dvh;
+  grid-template-rows: auto minmax(20rem, 1fr) auto;
   gap: 1rem;
   max-width: 64rem;
   margin: 0 auto;
@@ -67,6 +68,61 @@ body {
 
 .phaser-container canvas {
   display: block;
+}
+
+.selected-castle-panel {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #6d644e;
+  border-radius: 0.5rem;
+  background: #171c18;
+}
+
+.selected-castle-heading h2,
+.selected-castle-heading p,
+.selected-castle-empty,
+.selected-castle-details {
+  margin: 0;
+}
+
+.selected-castle-heading h2 {
+  overflow-wrap: anywhere;
+  font-family: serif;
+  font-size: 1.25rem;
+}
+
+.selected-castle-empty {
+  color: #c8bea6;
+  font-size: 0.875rem;
+}
+
+.selected-castle-details {
+  display: grid;
+  grid-template-columns: minmax(4rem, auto) minmax(0, 1fr);
+  gap: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.selected-castle-details dt {
+  color: #b9aa82;
+}
+
+.selected-castle-details dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.clan-symbol {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid #8c7f61;
+  border-radius: 999px;
+  color: #fff7df;
+  background: #252b26;
 }
 
 @media (prefers-reduced-motion: reduce) {

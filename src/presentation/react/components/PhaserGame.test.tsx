@@ -5,14 +5,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const phaserGameMocks = vi.hoisted(() => {
   const create = vi.fn();
   const destroy = vi.fn();
+  const resize = vi.fn();
 
-  return { create, destroy };
+  return { create, destroy, resize };
+});
+
+const resizeObserverMocks = vi.hoisted(() => {
+  const disconnect = vi.fn();
+  const observe = vi.fn();
+
+  return { disconnect, observe };
 });
 
 vi.mock('phaser', () => ({
   default: {
     Game: class Game {
       private readonly canvas: HTMLCanvasElement;
+      public readonly scale = { resize: phaserGameMocks.resize };
 
       public constructor(config: { readonly parent: HTMLElement }) {
         this.canvas = document.createElement('canvas');
@@ -44,6 +53,18 @@ describe('PhaserGame', () => {
   beforeEach(() => {
     phaserGameMocks.create.mockClear();
     phaserGameMocks.destroy.mockClear();
+    phaserGameMocks.resize.mockClear();
+    resizeObserverMocks.disconnect.mockClear();
+    resizeObserverMocks.observe.mockClear();
+    vi.stubGlobal('ResizeObserver', class ResizeObserver {
+      public disconnect(): void {
+        resizeObserverMocks.disconnect();
+      }
+
+      public observe(element: Element): void {
+        resizeObserverMocks.observe(element);
+      }
+    });
   });
 
   it('keeps one canvas and emits map data under React StrictMode', () => {
@@ -52,7 +73,7 @@ describe('PhaserGame', () => {
     const payload = createMapRenderDto(loadMapDefinition());
     bridge.subscribe('map-state-updated', mapListener);
 
-    render(
+    const { unmount } = render(
       <StrictMode>
         <PhaserGame bridge={bridge} mapRenderDto={payload} />
       </StrictMode>,
@@ -62,5 +83,14 @@ describe('PhaserGame', () => {
     expect(mapListener).toHaveBeenLastCalledWith({ type: 'map-state-updated', payload });
     expect(phaserGameMocks.create).toHaveBeenCalledTimes(2);
     expect(phaserGameMocks.destroy).toHaveBeenCalledOnce();
+    expect(phaserGameMocks.resize).toHaveBeenCalledWith(1, 1);
+    expect(resizeObserverMocks.observe).toHaveBeenCalledTimes(2);
+    expect(resizeObserverMocks.disconnect).toHaveBeenCalledOnce();
+
+    unmount();
+
+    expect(screen.queryByTestId('phaser-container')).not.toBeInTheDocument();
+    expect(phaserGameMocks.destroy).toHaveBeenCalledTimes(2);
+    expect(resizeObserverMocks.disconnect).toHaveBeenCalledTimes(2);
   });
 });
