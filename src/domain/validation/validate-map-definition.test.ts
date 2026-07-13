@@ -45,6 +45,20 @@ describe('validateMapDefinition', () => {
     expect(result.routes).toHaveLength(13);
   });
 
+  it('accepts all formal capital, owner, and route endpoint references', () => {
+    const result = validateMapDefinition(createValidInput());
+    const clanIds = new Set<string>(result.clans.map((clan) => clan.id));
+    const castleIds = new Set<string>(result.castles.map((castle) => castle.id));
+
+    expect(result.clans.every((clan) => castleIds.has(clan.capitalCastleId))).toBe(true);
+    expect(result.castles.every((castle) => clanIds.has(castle.initialOwnerClanId))).toBe(true);
+    expect(
+      result.routes.every(
+        (route) => castleIds.has(route.fromCastleId) && castleIds.has(route.toCastleId),
+      ),
+    ).toBe(true);
+  });
+
   it('allows castle coordinates on every padded boundary', () => {
     const input = createValidInput();
     const firstPosition = requireRecord(requireArrayRecord(input, 'castles', 0).position);
@@ -163,5 +177,78 @@ describe('validateMapDefinition', () => {
     requireArrayRecord(input, 'routes', 0).isBidirectional = false;
 
     expect(() => validateMapDefinition(input)).toThrow(/routes\[0\]\.isBidirectional/);
+  });
+
+  it('rejects a duplicate clan ID', () => {
+    const input = createValidInput();
+    requireArrayRecord(input, 'clans', 2).id = requireArrayRecord(input, 'clans', 0).id;
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /clans\[2\]\.id: duplicate clan id: clan_takeda/,
+    );
+  });
+
+  it('rejects a duplicate castle ID', () => {
+    const input = createValidInput();
+    requireArrayRecord(input, 'castles', 2).id = requireArrayRecord(input, 'castles', 0).id;
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /castles\[2\]\.id: duplicate castle id: castle_kasugayama/,
+    );
+  });
+
+  it('rejects a duplicate route ID', () => {
+    const input = createValidInput();
+    requireArrayRecord(input, 'routes', 2).id = requireArrayRecord(input, 'routes', 0).id;
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /routes\[2\]\.id: duplicate route id: route_kasugayama_sakado/,
+    );
+  });
+
+  it('rejects a capital that references an unknown castle', () => {
+    const input = createValidInput();
+    requireArrayRecord(input, 'clans', 0).capitalCastleId = 'castle_missing';
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /clans\[0\]\.capitalCastleId: unknown castle id: castle_missing/,
+    );
+  });
+
+  it('rejects multiple clans using the same capital castle', () => {
+    const input = createValidInput();
+    requireArrayRecord(input, 'clans', 1).capitalCastleId =
+      requireArrayRecord(input, 'clans', 0).capitalCastleId;
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /clans\[1\]\.capitalCastleId: duplicate capital castle id: castle_tsutsujigasaki/,
+    );
+  });
+
+  it('rejects a castle owner that references an unknown clan', () => {
+    const input = createValidInput();
+    requireArrayRecord(input, 'castles', 0).initialOwnerClanId = 'clan_missing';
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /castles\[0\]\.initialOwnerClanId: unknown clan id: clan_missing/,
+    );
+  });
+
+  it('rejects a route start that references an unknown castle', () => {
+    const input = createValidInput();
+    requireArrayRecord(input, 'routes', 0).fromCastleId = 'castle_missing';
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /routes\[0\]\.fromCastleId: unknown castle id: castle_missing/,
+    );
+  });
+
+  it('rejects a route end that references an unknown castle', () => {
+    const input = createValidInput();
+    requireArrayRecord(input, 'routes', 0).toCastleId = 'castle_missing';
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /routes\[0\]\.toCastleId: unknown castle id: castle_missing/,
+    );
   });
 });
