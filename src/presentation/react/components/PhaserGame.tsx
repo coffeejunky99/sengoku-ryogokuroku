@@ -1,14 +1,16 @@
 import Phaser from 'phaser';
 import { useEffect, useRef } from 'react';
 
+import type { MapRenderDto } from '../../../application/dto/map-render-dto';
 import type { GameBridge } from '../../phaser/bridge/game-bridge';
 import { createGameConfig } from '../../phaser/config/create-game-config';
 
 interface PhaserGameProps {
   readonly bridge: GameBridge;
+  readonly mapRenderDto: MapRenderDto;
 }
 
-export function PhaserGame({ bridge }: PhaserGameProps) {
+export function PhaserGame({ bridge, mapRenderDto }: PhaserGameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,6 +42,10 @@ export function PhaserGame({ bridge }: PhaserGameProps) {
       game.destroy(true);
     };
   }, [bridge]);
+
+  useEffect(() => {
+    bridge.emit({ type: 'map-state-updated', payload: mapRenderDto });
+  }, [bridge, mapRenderDto]);
 
   return <div ref={containerRef} className="phaser-container" data-testid="phaser-container" />;
 }

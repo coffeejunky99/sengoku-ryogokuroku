@@ -23,16 +23,19 @@ vi.mock('phaser', () => ({
 
 import { createGameBridge } from '../bridge/game-bridge';
 import { BOOT_SCENE_KEY } from '../scenes/BootScene';
+import { MAP_SCENE_KEY } from '../scenes/MapScene';
 
 import { createGameConfig } from './create-game-config';
 
 describe('createGameConfig', () => {
-  it('returns a parent-bound config with one uniquely keyed boot scene', () => {
+  it('registers uniquely keyed boot and map scenes', () => {
     const parent = document.createElement('div');
     const config = createGameConfig(parent, createGameBridge());
 
     expect(config.parent).toBe(parent);
-    expect(config.scene).toHaveLength(1);
+    expect(config.scene).toHaveLength(2);
     expect(BOOT_SCENE_KEY).toBe('boot-scene');
+    expect(MAP_SCENE_KEY).toBe('map-scene');
+    expect(new Set([BOOT_SCENE_KEY, MAP_SCENE_KEY])).toHaveLength(2);
   });
 });

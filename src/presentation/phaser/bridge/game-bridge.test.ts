@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createMapRenderDto } from '../../../application/queries/create-map-render-dto';
+import { loadMapDefinition } from '../../../infrastructure/data/load-map-definition';
+
 import { createGameBridge } from './game-bridge';
 
 describe('game bridge', () => {
@@ -38,5 +41,30 @@ describe('game bridge', () => {
     bridge.emit({ type: 'viewport-resized', width: 390, height: 844 });
 
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('delivers the typed map render payload and replays it to a late subscriber', () => {
+    const bridge = createGameBridge();
+    const payload = createMapRenderDto(loadMapDefinition());
+    const listener = vi.fn();
+
+    bridge.emit({ type: 'map-state-updated', payload });
+    bridge.subscribe('map-state-updated', listener);
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith({ type: 'map-state-updated', payload });
+  });
+
+  it('stops map state delivery after unsubscribe', () => {
+    const bridge = createGameBridge();
+    const payload = createMapRenderDto(loadMapDefinition());
+    const listener = vi.fn();
+    const unsubscribe = bridge.subscribe('map-state-updated', listener);
+
+    bridge.emit({ type: 'map-state-updated', payload });
+    unsubscribe();
+    bridge.emit({ type: 'map-state-updated', payload });
+
+    expect(listener).toHaveBeenCalledOnce();
   });
 });
