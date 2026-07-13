@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">戦国領国録</string>
+    <string name="title_activity_main">戦国領国録</string>
+    <string name="package_name">com.coffeejunky99.sengokuryogokuroku</string>
+    <string name="custom_url_scheme">com.coffeejunky99.sengokuryogokuroku</string>
+</resources>

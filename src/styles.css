@@ -1,0 +1,81 @@
+:root {
+  color: #f3ead4;
+  background: #0d120f;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+.app-shell,
+.error-screen {
+  width: 100%;
+  min-height: 100dvh;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+}
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto minmax(20rem, 1fr);
+  gap: 1rem;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.boot-panel h1,
+.boot-panel p {
+  margin: 0;
+}
+
+.boot-panel h1 {
+  font-family: serif;
+  font-size: clamp(1.75rem, 8vw, 2.75rem);
+}
+
+.eyebrow {
+  color: #b9aa82;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.phaser-container {
+  width: 100%;
+  min-height: 20rem;
+  overflow: hidden;
+  border: 1px solid #6d644e;
+  border-radius: 0.5rem;
+  background: #172019;
+}
+
+.phaser-container canvas {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
