@@ -13,7 +13,7 @@ const phaserMocks = vi.hoisted(() => {
   const setSize = vi.fn();
   const setText = vi.fn();
   const textConstruct = vi.fn();
-  let pointerUp: (() => void) | null = null;
+  let pointerUp: ((pointer: MapPointerInput) => void) | null = null;
 
   return {
     addChildren,
@@ -27,11 +27,11 @@ const phaserMocks = vi.hoisted(() => {
     setSize,
     setText,
     textConstruct,
-    capturePointerUp(listener: () => void) {
+    capturePointerUp(listener: (pointer: MapPointerInput) => void) {
       pointerUp = listener;
     },
-    emitPointerUp() {
-      pointerUp?.();
+    emitPointerUp(pointer: MapPointerInput) {
+      pointerUp?.(pointer);
     },
     reset() {
       addChildren.mockClear();
@@ -71,7 +71,7 @@ vi.mock('phaser', () => ({
           phaserMocks.addChildren(children);
         }
 
-        public on(_event: string, listener: () => void): void {
+        public on(_event: string, listener: (pointer: MapPointerInput) => void): void {
           phaserMocks.capturePointerUp(listener);
         }
 
@@ -116,6 +116,7 @@ vi.mock('phaser', () => ({
 import type { MapRenderCastleDto } from '../../../application/dto/map-render-dto';
 import { createMapRenderDto } from '../../../application/queries/create-map-render-dto';
 import { loadMapDefinition } from '../../../infrastructure/data/load-map-definition';
+import type { MapPointerInput } from '../systems/MapCameraController';
 
 import { CastleMapObject } from './CastleMapObject';
 
@@ -167,11 +168,12 @@ describe('CastleMapObject', () => {
     const castle = getFormalCastle();
     const onCastleSelected = vi.fn();
     new CastleMapObject(new Phaser.Scene(), castle, onCastleSelected);
+    const pointer = { id: 1, x: 760, y: 150, button: 0 };
 
-    phaserMocks.emitPointerUp();
+    phaserMocks.emitPointerUp(pointer);
 
     expect(onCastleSelected).toHaveBeenCalledOnce();
-    expect(onCastleSelected).toHaveBeenCalledWith(castle.id);
+    expect(onCastleSelected).toHaveBeenCalledWith(castle.id, pointer);
   });
 
   it('updates the existing object without reconstructing its children', () => {

@@ -3,6 +3,10 @@ import Phaser from 'phaser';
 import type { MapRenderCastleDto } from '../../../application/dto/map-render-dto';
 import type { GameBridge, GameBridgeEvent } from '../bridge/game-bridge';
 import { CastleMapObject } from '../game-objects/CastleMapObject';
+import {
+  MapCameraController,
+  type MapPointerInput,
+} from '../systems/MapCameraController';
 
 export const MAP_SCENE_KEY = 'map-scene';
 
@@ -17,6 +21,7 @@ type MapStateUpdatedEvent = Extract<
 
 export class MapScene extends Phaser.Scene {
   private readonly castleObjects = new Map<MapRenderCastleDto['id'], CastleMapObject>();
+  private cameraController: MapCameraController | null = null;
   private routeGraphics: Phaser.GameObjects.Graphics | null = null;
   private unsubscribeMapState: (() => void) | null = null;
 
@@ -27,6 +32,7 @@ export class MapScene extends Phaser.Scene {
   public create(): void {
     this.releaseResources();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.handleShutdown, this);
+    this.cameraController = new MapCameraController(this);
     this.unsubscribeMapState = this.bridge.subscribe(
       'map-state-updated',
       this.handleMapStateUpdated,
@@ -35,7 +41,7 @@ export class MapScene extends Phaser.Scene {
 
   private readonly handleMapStateUpdated = (event: MapStateUpdatedEvent): void => {
     const map = event.payload;
-    this.cameras.main.setBounds(0, 0, map.logicalWidth, map.logicalHeight);
+    this.cameraController?.applyMap(map);
 
     const graphics = this.routeGraphics ?? this.add.graphics();
     this.routeGraphics = graphics;
@@ -60,8 +66,13 @@ export class MapScene extends Phaser.Scene {
     });
   };
 
-  private readonly handleCastleSelected = (castleId: MapRenderCastleDto['id']): void => {
-    this.bridge.emit({ type: 'castle-selected', castleId });
+  private readonly handleCastleSelected = (
+    castleId: MapRenderCastleDto['id'],
+    pointer: MapPointerInput,
+  ): void => {
+    if (this.cameraController?.consumeCastleTap(pointer) === true) {
+      this.bridge.emit({ type: 'castle-selected', castleId });
+    }
   };
 
   private readonly handleShutdown = (): void => {
@@ -71,6 +82,8 @@ export class MapScene extends Phaser.Scene {
   private releaseResources(): void {
     this.unsubscribeMapState?.();
     this.unsubscribeMapState = null;
+    this.cameraController?.destroy();
+    this.cameraController = null;
     this.routeGraphics?.destroy();
     this.routeGraphics = null;
     this.castleObjects.forEach((castleObject) => {

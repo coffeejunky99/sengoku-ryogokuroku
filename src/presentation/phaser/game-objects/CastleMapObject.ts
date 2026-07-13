@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 import type { MapRenderCastleDto } from '../../../application/dto/map-render-dto';
+import type { MapPointerInput } from '../systems/MapCameraController';
 
 const CASTLE_MARKER_RADIUS = 22;
 const CASTLE_INTERACTIVE_SIZE = 48;
@@ -8,7 +9,10 @@ const CASTLE_MARKER_ALPHA = 1;
 const CASTLE_SYMBOL_COLOR = '#ffffff';
 const CASTLE_SYMBOL_FONT_SIZE = '12px';
 
-type CastleSelectedHandler = (castleId: MapRenderCastleDto['id']) => void;
+type CastleSelectedHandler = (
+  castleId: MapRenderCastleDto['id'],
+  pointer: MapPointerInput,
+) => void;
 
 function toPhaserColor(hexColor: string): number {
   return Number.parseInt(hexColor.slice(1), 16);
@@ -48,8 +52,8 @@ export class CastleMapObject extends Phaser.GameObjects.Container {
     this.add([this.marker, this.symbol]);
     this.setSize(CASTLE_INTERACTIVE_SIZE, CASTLE_INTERACTIVE_SIZE);
     this.setInteractive({ useHandCursor: true });
-    this.on(Phaser.Input.Events.POINTER_UP, () => {
-      onCastleSelected(this.castleId);
+    this.on(Phaser.Input.Events.POINTER_UP, (pointer: Phaser.Input.Pointer) => {
+      onCastleSelected(this.castleId, pointer);
     });
     scene.add.existing(this);
   }

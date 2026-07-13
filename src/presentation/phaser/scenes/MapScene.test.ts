@@ -7,7 +7,6 @@ const phaserMocks = vi.hoisted(() => {
   const lineStyle = vi.fn();
   const graphics = { clear, destroy, lineBetween, lineStyle };
   const addGraphics = vi.fn(() => graphics);
-  const setBounds = vi.fn();
   let shutdown: (() => void) | null = null;
 
   return {
@@ -16,7 +15,6 @@ const phaserMocks = vi.hoisted(() => {
     destroy,
     lineBetween,
     lineStyle,
-    setBounds,
     captureShutdown(listener: () => void) {
       shutdown = listener;
     },
@@ -29,7 +27,6 @@ const phaserMocks = vi.hoisted(() => {
       destroy.mockClear();
       lineBetween.mockClear();
       lineStyle.mockClear();
-      setBounds.mockClear();
       shutdown = null;
     },
   };
@@ -39,25 +36,35 @@ const castleObjectMocks = vi.hoisted(() => {
   const construct = vi.fn();
   const destroy = vi.fn();
   const updateFromDto = vi.fn();
-  const selectionHandlers: ((castleId: string) => void)[] = [];
+  const selectionHandlers: ((castleId: string, pointer: MockPointer) => void)[] = [];
   const castleIds: string[] = [];
+
+  interface MockPointer {
+    readonly id: number;
+    readonly x: number;
+    readonly y: number;
+    readonly button: number;
+  }
 
   return {
     construct,
     destroy,
     updateFromDto,
-    register(castleId: string, selectionHandler: (castleId: string) => void) {
+    register(
+      castleId: string,
+      selectionHandler: (castleId: string, pointer: MockPointer) => void,
+    ) {
       castleIds.push(castleId);
       selectionHandlers.push(selectionHandler);
       construct(castleId);
     },
-    select(index: number) {
+    select(index: number, pointer: MockPointer) {
       const selectionHandler = selectionHandlers[index];
       const castleId = castleIds[index];
       if (selectionHandler === undefined || castleId === undefined) {
         throw new Error(`No mocked castle exists at index ${String(index)}.`);
       }
-      selectionHandler(castleId);
+      selectionHandler(castleId, pointer);
     },
     reset() {
       construct.mockClear();
@@ -69,11 +76,34 @@ const castleObjectMocks = vi.hoisted(() => {
   };
 });
 
+const cameraControllerMocks = vi.hoisted(() => {
+  const applyMap = vi.fn();
+  const construct = vi.fn();
+  const consumeCastleTap = vi.fn((pointer: unknown) => {
+    void pointer;
+    return true;
+  });
+  const destroy = vi.fn();
+
+  return {
+    applyMap,
+    construct,
+    consumeCastleTap,
+    destroy,
+    reset() {
+      applyMap.mockClear();
+      construct.mockClear();
+      consumeCastleTap.mockReset();
+      consumeCastleTap.mockReturnValue(true);
+      destroy.mockClear();
+    },
+  };
+});
+
 vi.mock('phaser', () => ({
   default: {
     Scene: class Scene {
       public readonly add = { graphics: phaserMocks.addGraphics };
-      public readonly cameras = { main: { setBounds: phaserMocks.setBounds } };
       public readonly events = {
         once: (_event: string, listener: () => void, context: unknown) => {
           phaserMocks.captureShutdown(() => {
@@ -90,12 +120,35 @@ vi.mock('phaser', () => ({
   },
 }));
 
+vi.mock('../systems/MapCameraController', () => ({
+  MapCameraController: class MapCameraController {
+    public constructor(scene: unknown) {
+      cameraControllerMocks.construct(scene);
+    }
+
+    public applyMap(map: unknown): void {
+      cameraControllerMocks.applyMap(map);
+    }
+
+    public consumeCastleTap(pointer: unknown): boolean {
+      return cameraControllerMocks.consumeCastleTap(pointer);
+    }
+
+    public destroy(): void {
+      cameraControllerMocks.destroy();
+    }
+  },
+}));
+
 vi.mock('../game-objects/CastleMapObject', () => ({
   CastleMapObject: class CastleMapObject {
     public constructor(
       _scene: unknown,
       castle: { readonly id: string },
-      selectionHandler: (castleId: string) => void,
+      selectionHandler: (
+        castleId: string,
+        pointer: { readonly id: number; readonly x: number; readonly y: number; readonly button: number },
+      ) => void,
     ) {
       castleObjectMocks.register(castle.id, selectionHandler);
     }
@@ -120,6 +173,7 @@ describe('MapScene', () => {
   beforeEach(() => {
     phaserMocks.reset();
     castleObjectMocks.reset();
+    cameraControllerMocks.reset();
   });
 
   it('does not create graphics before receiving map data', () => {
@@ -136,7 +190,7 @@ describe('MapScene', () => {
 
     new MapScene(bridge).create();
 
-    expect(phaserMocks.setBounds).toHaveBeenCalledWith(0, 0, 1600, 1200);
+    expect(cameraControllerMocks.applyMap).toHaveBeenCalledWith(payload);
     expect(phaserMocks.addGraphics).toHaveBeenCalledOnce();
     expect(phaserMocks.lineBetween).toHaveBeenCalledTimes(13);
     expect(phaserMocks.lineBetween).toHaveBeenNthCalledWith(1, 760, 150, 940, 300);
@@ -172,12 +226,29 @@ describe('MapScene', () => {
     scene.create();
     bridge.emit({ type: 'map-state-updated', payload });
 
-    castleObjectMocks.select(0);
+    const pointer = { id: 1, x: selectedCastle.position.x, y: selectedCastle.position.y, button: 0 };
+    castleObjectMocks.select(0, pointer);
 
+    expect(cameraControllerMocks.consumeCastleTap).toHaveBeenCalledWith(pointer);
     expect(selectionListener).toHaveBeenCalledWith({
       type: 'castle-selected',
       castleId: selectedCastle.id,
     });
+  });
+
+  it('does not emit castle selection when the camera controller rejects the gesture', () => {
+    const bridge = createGameBridge();
+    const payload = createMapRenderDto(loadMapDefinition());
+    const selectionListener = vi.fn();
+    bridge.subscribe('castle-selected', selectionListener);
+    const scene = new MapScene(bridge);
+    scene.create();
+    bridge.emit({ type: 'map-state-updated', payload });
+    cameraControllerMocks.consumeCastleTap.mockReturnValue(false);
+
+    castleObjectMocks.select(0, { id: 1, x: 800, y: 600, button: 0 });
+
+    expect(selectionListener).not.toHaveBeenCalled();
   });
 
   it('unsubscribes and destroys route graphics on shutdown', () => {
@@ -194,5 +265,6 @@ describe('MapScene', () => {
     expect(phaserMocks.clear).toHaveBeenCalledOnce();
     expect(phaserMocks.lineBetween).toHaveBeenCalledTimes(13);
     expect(castleObjectMocks.destroy).toHaveBeenCalledTimes(10);
+    expect(cameraControllerMocks.destroy).toHaveBeenCalledOnce();
   });
 });
