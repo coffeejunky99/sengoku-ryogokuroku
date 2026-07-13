@@ -237,6 +237,78 @@ function validateRoute(input: unknown, path: string): MapRouteDefinition {
   };
 }
 
+function collectUniqueIds(
+  items: readonly { readonly id: string }[],
+  collectionPath: string,
+  entityName: string,
+): Set<string> {
+  const ids: Set<string> = new Set<string>();
+
+  items.forEach((item, index) => {
+    const path = `${collectionPath}[${String(index)}].id`;
+    if (ids.has(item.id)) {
+      fail(path, `duplicate ${entityName} id: ${item.id}`);
+    }
+    ids.add(item.id);
+  });
+
+  return ids;
+}
+
+function requireReference(
+  value: string,
+  targetIds: ReadonlySet<string>,
+  path: string,
+  targetName: string,
+): void {
+  if (!targetIds.has(value)) {
+    fail(path, `unknown ${targetName} id: ${value}`);
+  }
+}
+
+function validateReferences(
+  clans: readonly MapClanDefinition[],
+  castles: readonly MapCastleDefinition[],
+  routes: readonly MapRouteDefinition[],
+  clanIds: ReadonlySet<string>,
+  castleIds: ReadonlySet<string>,
+): void {
+  const capitalCastleIds: Set<string> = new Set<string>();
+
+  clans.forEach((clan, index) => {
+    const path = `clans[${String(index)}].capitalCastleId`;
+    requireReference(clan.capitalCastleId, castleIds, path, 'castle');
+    if (capitalCastleIds.has(clan.capitalCastleId)) {
+      fail(path, `duplicate capital castle id: ${clan.capitalCastleId}`);
+    }
+    capitalCastleIds.add(clan.capitalCastleId);
+  });
+
+  castles.forEach((castle, index) => {
+    requireReference(
+      castle.initialOwnerClanId,
+      clanIds,
+      `castles[${String(index)}].initialOwnerClanId`,
+      'clan',
+    );
+  });
+
+  routes.forEach((route, index) => {
+    requireReference(
+      route.fromCastleId,
+      castleIds,
+      `routes[${String(index)}].fromCastleId`,
+      'castle',
+    );
+    requireReference(
+      route.toCastleId,
+      castleIds,
+      `routes[${String(index)}].toCastleId`,
+      'castle',
+    );
+  });
+}
+
 export function validateMapDefinition(input: unknown): MapDefinition {
   const root = requireRecord(input, '$');
   const logicalWidth = requirePositiveNumber(
@@ -292,6 +364,10 @@ export function validateMapDefinition(input: unknown): MapDefinition {
   const routes: readonly MapRouteDefinition[] = routesInput.map((route, index) =>
     validateRoute(route, `routes[${String(index)}]`),
   );
+  const clanIds = collectUniqueIds(clans, 'clans', 'clan');
+  const castleIds = collectUniqueIds(castles, 'castles', 'castle');
+  collectUniqueIds(routes, 'routes', 'route');
+  validateReferences(clans, castles, routes, clanIds, castleIds);
 
   return {
     logicalWidth,
