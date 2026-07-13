@@ -1,3 +1,5 @@
+import type { CastleId } from '../../domain/types/ids';
+
 export interface MapRenderPositionDto {
   readonly x: number;
   readonly y: number;
@@ -18,7 +20,7 @@ export interface MapRenderClanDto {
 }
 
 export interface MapRenderCastleDto {
-  readonly id: string;
+  readonly id: CastleId;
   readonly name: string;
   readonly position: MapRenderPositionDto;
   readonly ownerColor: string;

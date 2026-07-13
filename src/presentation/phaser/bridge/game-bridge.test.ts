@@ -67,4 +67,21 @@ describe('game bridge', () => {
 
     expect(listener).toHaveBeenCalledOnce();
   });
+
+  it('delivers castle selection with its typed castle ID and supports unsubscribe', () => {
+    const bridge = createGameBridge();
+    const castle = createMapRenderDto(loadMapDefinition()).castles[0];
+    if (castle === undefined) {
+      throw new Error('The formal map fixture has no castle.');
+    }
+    const listener = vi.fn();
+    const unsubscribe = bridge.subscribe('castle-selected', listener);
+
+    bridge.emit({ type: 'castle-selected', castleId: castle.id });
+    unsubscribe();
+    bridge.emit({ type: 'castle-selected', castleId: castle.id });
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith({ type: 'castle-selected', castleId: castle.id });
+  });
 });

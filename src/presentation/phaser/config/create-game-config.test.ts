@@ -21,6 +21,12 @@ vi.mock('phaser', () => ({
   },
 }));
 
+vi.mock('../game-objects/CastleMapObject', () => ({
+  CastleMapObject: class CastleMapObject {
+    public readonly mocked = true;
+  },
+}));
+
 import { createGameBridge } from '../bridge/game-bridge';
 import { BOOT_SCENE_KEY } from '../scenes/BootScene';
 import { MAP_SCENE_KEY } from '../scenes/MapScene';

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 
+import type { MapRenderCastleDto } from '../../../application/dto/map-render-dto';
 import type { GameBridge, GameBridgeEvent } from '../bridge/game-bridge';
+import { CastleMapObject } from '../game-objects/CastleMapObject';
 
 export const MAP_SCENE_KEY = 'map-scene';
 
@@ -14,6 +16,7 @@ type MapStateUpdatedEvent = Extract<
 >;
 
 export class MapScene extends Phaser.Scene {
+  private readonly castleObjects = new Map<MapRenderCastleDto['id'], CastleMapObject>();
   private routeGraphics: Phaser.GameObjects.Graphics | null = null;
   private unsubscribeMapState: (() => void) | null = null;
 
@@ -42,6 +45,23 @@ export class MapScene extends Phaser.Scene {
     map.routes.forEach((route) => {
       graphics.lineBetween(route.from.x, route.from.y, route.to.x, route.to.y);
     });
+
+    map.castles.forEach((castle) => {
+      const castleObject = this.castleObjects.get(castle.id);
+      if (castleObject === undefined) {
+        this.castleObjects.set(
+          castle.id,
+          new CastleMapObject(this, castle, this.handleCastleSelected),
+        );
+        return;
+      }
+
+      castleObject.updateFromDto(castle);
+    });
+  };
+
+  private readonly handleCastleSelected = (castleId: MapRenderCastleDto['id']): void => {
+    this.bridge.emit({ type: 'castle-selected', castleId });
   };
 
   private readonly handleShutdown = (): void => {
@@ -53,5 +73,9 @@ export class MapScene extends Phaser.Scene {
     this.unsubscribeMapState = null;
     this.routeGraphics?.destroy();
     this.routeGraphics = null;
+    this.castleObjects.forEach((castleObject) => {
+      castleObject.destroy();
+    });
+    this.castleObjects.clear();
   }
 }

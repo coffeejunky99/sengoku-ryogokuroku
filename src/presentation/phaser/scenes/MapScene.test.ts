@@ -35,6 +35,40 @@ const phaserMocks = vi.hoisted(() => {
   };
 });
 
+const castleObjectMocks = vi.hoisted(() => {
+  const construct = vi.fn();
+  const destroy = vi.fn();
+  const updateFromDto = vi.fn();
+  const selectionHandlers: ((castleId: string) => void)[] = [];
+  const castleIds: string[] = [];
+
+  return {
+    construct,
+    destroy,
+    updateFromDto,
+    register(castleId: string, selectionHandler: (castleId: string) => void) {
+      castleIds.push(castleId);
+      selectionHandlers.push(selectionHandler);
+      construct(castleId);
+    },
+    select(index: number) {
+      const selectionHandler = selectionHandlers[index];
+      const castleId = castleIds[index];
+      if (selectionHandler === undefined || castleId === undefined) {
+        throw new Error(`No mocked castle exists at index ${String(index)}.`);
+      }
+      selectionHandler(castleId);
+    },
+    reset() {
+      construct.mockClear();
+      destroy.mockClear();
+      updateFromDto.mockClear();
+      castleIds.length = 0;
+      selectionHandlers.length = 0;
+    },
+  };
+});
+
 vi.mock('phaser', () => ({
   default: {
     Scene: class Scene {
@@ -56,6 +90,26 @@ vi.mock('phaser', () => ({
   },
 }));
 
+vi.mock('../game-objects/CastleMapObject', () => ({
+  CastleMapObject: class CastleMapObject {
+    public constructor(
+      _scene: unknown,
+      castle: { readonly id: string },
+      selectionHandler: (castleId: string) => void,
+    ) {
+      castleObjectMocks.register(castle.id, selectionHandler);
+    }
+
+    public updateFromDto(castle: unknown): void {
+      castleObjectMocks.updateFromDto(castle);
+    }
+
+    public destroy(): void {
+      castleObjectMocks.destroy();
+    }
+  },
+}));
+
 import { createMapRenderDto } from '../../../application/queries/create-map-render-dto';
 import { loadMapDefinition } from '../../../infrastructure/data/load-map-definition';
 import { createGameBridge } from '../bridge/game-bridge';
@@ -65,6 +119,7 @@ import { MapScene } from './MapScene';
 describe('MapScene', () => {
   beforeEach(() => {
     phaserMocks.reset();
+    castleObjectMocks.reset();
   });
 
   it('does not create graphics before receiving map data', () => {
@@ -85,6 +140,7 @@ describe('MapScene', () => {
     expect(phaserMocks.addGraphics).toHaveBeenCalledOnce();
     expect(phaserMocks.lineBetween).toHaveBeenCalledTimes(13);
     expect(phaserMocks.lineBetween).toHaveBeenNthCalledWith(1, 760, 150, 940, 300);
+    expect(castleObjectMocks.construct).toHaveBeenCalledTimes(10);
   });
 
   it('clears and redraws the same Graphics object when the DTO changes', () => {
@@ -99,6 +155,29 @@ describe('MapScene', () => {
     expect(phaserMocks.addGraphics).toHaveBeenCalledOnce();
     expect(phaserMocks.clear).toHaveBeenCalledTimes(2);
     expect(phaserMocks.lineBetween).toHaveBeenCalledTimes(26);
+    expect(castleObjectMocks.construct).toHaveBeenCalledTimes(10);
+    expect(castleObjectMocks.updateFromDto).toHaveBeenCalledTimes(10);
+  });
+
+  it('emits the selected castle ID through the bridge', () => {
+    const bridge = createGameBridge();
+    const payload = createMapRenderDto(loadMapDefinition());
+    const selectedCastle = payload.castles[0];
+    if (selectedCastle === undefined) {
+      throw new Error('The formal map fixture has no castle.');
+    }
+    const selectionListener = vi.fn();
+    bridge.subscribe('castle-selected', selectionListener);
+    const scene = new MapScene(bridge);
+    scene.create();
+    bridge.emit({ type: 'map-state-updated', payload });
+
+    castleObjectMocks.select(0);
+
+    expect(selectionListener).toHaveBeenCalledWith({
+      type: 'castle-selected',
+      castleId: selectedCastle.id,
+    });
   });
 
   it('unsubscribes and destroys route graphics on shutdown', () => {
@@ -114,5 +193,6 @@ describe('MapScene', () => {
     expect(phaserMocks.destroy).toHaveBeenCalledOnce();
     expect(phaserMocks.clear).toHaveBeenCalledOnce();
     expect(phaserMocks.lineBetween).toHaveBeenCalledTimes(13);
+    expect(castleObjectMocks.destroy).toHaveBeenCalledTimes(10);
   });
 });

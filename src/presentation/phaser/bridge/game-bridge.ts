@@ -1,9 +1,13 @@
-import type { MapRenderDto } from '../../../application/dto/map-render-dto';
+import type {
+  MapRenderCastleDto,
+  MapRenderDto,
+} from '../../../application/dto/map-render-dto';
 
 export type GameBridgeEvent =
   | { readonly type: 'boot-completed' }
   | { readonly type: 'viewport-resized'; readonly width: number; readonly height: number }
-  | { readonly type: 'map-state-updated'; readonly payload: MapRenderDto };
+  | { readonly type: 'map-state-updated'; readonly payload: MapRenderDto }
+  | { readonly type: 'castle-selected'; readonly castleId: MapRenderCastleDto['id'] };
 
 type GameBridgeEventType = GameBridgeEvent['type'];
 type GameBridgeListener<TType extends GameBridgeEventType> = (
