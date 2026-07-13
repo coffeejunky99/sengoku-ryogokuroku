@@ -1,6 +1,9 @@
+import type { MapRenderDto } from '../../../application/dto/map-render-dto';
+
 export type GameBridgeEvent =
   | { readonly type: 'boot-completed' }
-  | { readonly type: 'viewport-resized'; readonly width: number; readonly height: number };
+  | { readonly type: 'viewport-resized'; readonly width: number; readonly height: number }
+  | { readonly type: 'map-state-updated'; readonly payload: MapRenderDto };
 
 type GameBridgeEventType = GameBridgeEvent['type'];
 type GameBridgeListener<TType extends GameBridgeEventType> = (
@@ -17,9 +20,14 @@ export interface GameBridge {
 
 export function createGameBridge(): GameBridge {
   const listeners = new Map<GameBridgeEventType, Set<(event: GameBridgeEvent) => void>>();
+  let latestMapStateEvent: Extract<GameBridgeEvent, { readonly type: 'map-state-updated' }> | null =
+    null;
 
   return {
     emit(event) {
+      if (event.type === 'map-state-updated') {
+        latestMapStateEvent = event;
+      }
       listeners.get(event.type)?.forEach((listener) => {
         listener(event);
       });
@@ -34,6 +42,9 @@ export function createGameBridge(): GameBridge {
 
       eventListeners.add(eventListener);
       listeners.set(type, eventListeners);
+      if (type === 'map-state-updated' && latestMapStateEvent !== null) {
+        eventListener(latestMapStateEvent);
+      }
 
       return () => {
         eventListeners.delete(eventListener);
