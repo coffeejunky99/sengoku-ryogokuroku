@@ -309,6 +309,84 @@ function validateReferences(
   });
 }
 
+function normalizeRouteEndpoints(firstCastleId: string, secondCastleId: string): string {
+  return firstCastleId < secondCastleId
+    ? `${firstCastleId}\u0000${secondCastleId}`
+    : `${secondCastleId}\u0000${firstCastleId}`;
+}
+
+function validateRouteGraph(
+  castles: readonly MapCastleDefinition[],
+  routes: readonly MapRouteDefinition[],
+): void {
+  const routePairIndices: Map<string, number> = new Map<string, number>();
+  const adjacency: Map<string, Set<string>> = new Map<string, Set<string>>();
+
+  castles.forEach((castle) => {
+    adjacency.set(castle.id, new Set<string>());
+  });
+
+  routes.forEach((route, index) => {
+    if (route.fromCastleId === route.toCastleId) {
+      fail(
+        `routes[${String(index)}].toCastleId`,
+        `route endpoints must differ: ${route.fromCastleId}`,
+      );
+    }
+
+    const routePairKey = normalizeRouteEndpoints(route.fromCastleId, route.toCastleId);
+    const firstRouteIndex = routePairIndices.get(routePairKey);
+    if (firstRouteIndex !== undefined) {
+      fail(
+        `routes[${String(index)}].fromCastleId`,
+        `duplicate route endpoints: ${route.fromCastleId} <-> ${route.toCastleId}; first route: routes[${String(firstRouteIndex)}]`,
+      );
+    }
+    routePairIndices.set(routePairKey, index);
+
+    const fromNeighbors = adjacency.get(route.fromCastleId);
+    const toNeighbors = adjacency.get(route.toCastleId);
+    if (fromNeighbors === undefined) {
+      fail(`routes[${String(index)}].fromCastleId`, `unknown castle id: ${route.fromCastleId}`);
+    }
+    if (toNeighbors === undefined) {
+      fail(`routes[${String(index)}].toCastleId`, `unknown castle id: ${route.toCastleId}`);
+    }
+    fromNeighbors.add(route.toCastleId);
+    toNeighbors.add(route.fromCastleId);
+  });
+
+  const firstCastle = castles[0];
+  if (firstCastle === undefined) {
+    fail('castles', 'expected at least one castle');
+  }
+
+  const visitedCastleIds: Set<string> = new Set<string>([firstCastle.id]);
+  const pendingCastleIds: string[] = [firstCastle.id];
+  while (pendingCastleIds.length > 0) {
+    const castleId = pendingCastleIds.shift();
+    if (castleId === undefined) {
+      continue;
+    }
+    const neighbors = adjacency.get(castleId);
+    if (neighbors === undefined) {
+      fail('routes', `missing graph node for castle id: ${castleId}`);
+    }
+    neighbors.forEach((neighborId) => {
+      if (!visitedCastleIds.has(neighborId)) {
+        visitedCastleIds.add(neighborId);
+        pendingCastleIds.push(neighborId);
+      }
+    });
+  }
+
+  castles.forEach((castle, index) => {
+    if (!visitedCastleIds.has(castle.id)) {
+      fail(`castles[${String(index)}].id`, `unreachable castle id: ${castle.id}`);
+    }
+  });
+}
+
 export function validateMapDefinition(input: unknown): MapDefinition {
   const root = requireRecord(input, '$');
   const logicalWidth = requirePositiveNumber(
@@ -368,6 +446,7 @@ export function validateMapDefinition(input: unknown): MapDefinition {
   const castleIds = collectUniqueIds(castles, 'castles', 'castle');
   collectUniqueIds(routes, 'routes', 'route');
   validateReferences(clans, castles, routes, clanIds, castleIds);
+  validateRouteGraph(castles, routes);
 
   return {
     logicalWidth,

@@ -35,6 +35,56 @@ function requireArrayRecord(record: MutableRecord, field: string, index: number)
   return requireRecord(requireArray(record, field)[index]);
 }
 
+interface RouteEndpoints {
+  readonly from: string;
+  readonly to: string;
+}
+
+function replaceRouteEndpoints(input: MutableRecord, endpoints: readonly RouteEndpoints[]): void {
+  const routes = requireArray(input, 'routes');
+  if (routes.length !== endpoints.length) {
+    throw new Error('Test fixture route endpoint count does not match.');
+  }
+
+  endpoints.forEach((endpoint, index) => {
+    const route = requireRecord(routes[index]);
+    route.fromCastleId = endpoint.from;
+    route.toCastleId = endpoint.to;
+  });
+}
+
+const ISOLATED_CASTLE_ROUTES: readonly RouteEndpoints[] = [
+  { from: 'castle_kasugayama', to: 'castle_sakado' },
+  { from: 'castle_kasugayama', to: 'castle_kaizu' },
+  { from: 'castle_kasugayama', to: 'castle_katsurao' },
+  { from: 'castle_kasugayama', to: 'castle_fukashi' },
+  { from: 'castle_kasugayama', to: 'castle_tsutsujigasaki' },
+  { from: 'castle_kasugayama', to: 'castle_minowa' },
+  { from: 'castle_kasugayama', to: 'castle_hachigata' },
+  { from: 'castle_kasugayama', to: 'castle_odawara' },
+  { from: 'castle_sakado', to: 'castle_kaizu' },
+  { from: 'castle_sakado', to: 'castle_katsurao' },
+  { from: 'castle_sakado', to: 'castle_fukashi' },
+  { from: 'castle_sakado', to: 'castle_tsutsujigasaki' },
+  { from: 'castle_sakado', to: 'castle_minowa' },
+];
+
+const DISCONNECTED_COMPONENT_ROUTES: readonly RouteEndpoints[] = [
+  { from: 'castle_kasugayama', to: 'castle_sakado' },
+  { from: 'castle_kasugayama', to: 'castle_kaizu' },
+  { from: 'castle_kasugayama', to: 'castle_katsurao' },
+  { from: 'castle_kasugayama', to: 'castle_fukashi' },
+  { from: 'castle_sakado', to: 'castle_kaizu' },
+  { from: 'castle_sakado', to: 'castle_katsurao' },
+  { from: 'castle_sakado', to: 'castle_fukashi' },
+  { from: 'castle_tsutsujigasaki', to: 'castle_minowa' },
+  { from: 'castle_tsutsujigasaki', to: 'castle_hachigata' },
+  { from: 'castle_tsutsujigasaki', to: 'castle_odawara' },
+  { from: 'castle_tsutsujigasaki', to: 'castle_matsuyama' },
+  { from: 'castle_minowa', to: 'castle_hachigata' },
+  { from: 'castle_minowa', to: 'castle_odawara' },
+];
+
 describe('validateMapDefinition', () => {
   it('returns the formal map input as a MapDefinition', () => {
     const result = validateMapDefinition(createValidInput());
@@ -57,6 +107,10 @@ describe('validateMapDefinition', () => {
         (route) => castleIds.has(route.fromCastleId) && castleIds.has(route.toCastleId),
       ),
     ).toBe(true);
+  });
+
+  it('accepts the formal route graph with all ten castles connected', () => {
+    expect(() => validateMapDefinition(createValidInput())).not.toThrow();
   });
 
   it('allows castle coordinates on every padded boundary', () => {
@@ -250,5 +304,55 @@ describe('validateMapDefinition', () => {
     expect(() => validateMapDefinition(input)).toThrow(
       /routes\[0\]\.toCastleId: unknown castle id: castle_missing/,
     );
+  });
+
+  it('rejects a self-connected route', () => {
+    const input = createValidInput();
+    const route = requireArrayRecord(input, 'routes', 0);
+    route.toCastleId = route.fromCastleId;
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /routes\[0\]\.toCastleId: route endpoints must differ: castle_kasugayama/,
+    );
+  });
+
+  it('rejects duplicate route endpoints in the same direction', () => {
+    const input = createValidInput();
+    const firstRoute = requireArrayRecord(input, 'routes', 0);
+    const secondRoute = requireArrayRecord(input, 'routes', 1);
+    secondRoute.fromCastleId = firstRoute.fromCastleId;
+    secondRoute.toCastleId = firstRoute.toCastleId;
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /routes\[1\]\.fromCastleId: duplicate route endpoints: castle_kasugayama <-> castle_sakado/,
+    );
+  });
+
+  it('rejects duplicate route endpoints in the reverse direction', () => {
+    const input = createValidInput();
+    const firstRoute = requireArrayRecord(input, 'routes', 0);
+    const secondRoute = requireArrayRecord(input, 'routes', 1);
+    secondRoute.fromCastleId = firstRoute.toCastleId;
+    secondRoute.toCastleId = firstRoute.fromCastleId;
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /routes\[1\]\.fromCastleId: duplicate route endpoints: castle_sakado <-> castle_kasugayama/,
+    );
+  });
+
+  it('rejects an isolated castle', () => {
+    const input = createValidInput();
+    replaceRouteEndpoints(input, ISOLATED_CASTLE_ROUTES);
+
+    expect(() => validateMapDefinition(input)).toThrow(
+      /castles\[9\]\.id: unreachable castle id: castle_matsuyama/,
+    );
+  });
+
+  it('rejects a graph split into multiple connected components', () => {
+    const input = createValidInput();
+    replaceRouteEndpoints(input, DISCONNECTED_COMPONENT_ROUTES);
+
+    expect(() => validateMapDefinition(input)).toThrow(/unreachable castle id:/);
   });
 });
