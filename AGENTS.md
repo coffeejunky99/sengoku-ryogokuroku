@@ -22,13 +22,17 @@ Codex performs implementation work, but Codex must not make unapproved game-desi
 
 The specification hierarchy is strict.
 
-1. `docs/GDD/戦国領国録_GDD_v0.1.docx`
-2. `docs/design/戦国領国録_データ設計書_v0.1.docx`
-3. `docs/design/戦国領国録_技術設計書_v0.1.docx`
-4. the task-specific instruction file under `docs/codex/`
-5. existing code and tests
+1. `docs/GDD/GDD.md`
+2. GDD documents normatively referenced by `docs/GDD/GDD.md`
+3. `docs/design/data-design.md`
+4. `docs/design/technical-design.md`
+5. this `AGENTS.md`
+6. the task-specific instruction file under `docs/codex/`
+7. existing code and tests
 
-The GDD is the only authority for game design.
+The Markdown documents tracked by Git are the source of truth. DOCX files are human-readable distribution and review snapshots. If Markdown and DOCX differ, Markdown takes precedence. If the GDD body and a referenced GDD data document differ, the GDD body takes precedence.
+
+The GDD body and the GDD documents it normatively references are the authority for game design, with the GDD body taking precedence.
 
 If code, tests, task instructions, data, or documentation conflict with the GDD:
 
