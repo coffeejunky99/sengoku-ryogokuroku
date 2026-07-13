@@ -32,14 +32,18 @@ export function PhaserGame({ bridge, mapRenderDto }: PhaserGameProps) {
     const resize = (): void => {
       const width = Math.max(1, Math.round(container.clientWidth));
       const height = Math.max(1, Math.round(container.clientHeight));
+      game.scale.resize(width, height);
       bridge.emit({ type: 'viewport-resized', width, height });
     };
     resize();
-    window.addEventListener('resize', resize);
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(container);
 
     return () => {
-      window.removeEventListener('resize', resize);
+      resizeObserver.disconnect();
       game.destroy(true);
+      // Phaser defers destruction, but StrictMode recreates the game before the next frame.
+      game.canvas.remove();
     };
   }, [bridge]);
 
