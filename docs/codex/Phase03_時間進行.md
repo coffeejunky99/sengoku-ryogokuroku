@@ -13,11 +13,14 @@
 - `AGENTS.md`
 - `docs/codex/README.md`
 - `docs/GDD/GDD.md`
+- `docs/GDD/縦切り試作データ一覧_v0.1.md`
 - `docs/design/data-design.md`
 - `docs/design/technical-design.md`
 - 直前Phaseの完了報告
 
 GDDに存在しない仕様は実装しない。
+
+Phase03は時間進行だけを対象とする。Phase02の全国マップデータを変更せず、描画フレームとシミュレーション更新の分離に必要な連携だけを行う。
 
 ---
 
