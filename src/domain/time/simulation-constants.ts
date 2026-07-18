@@ -1,0 +1,3 @@
+export const SIMULATION_STEP_MS = 250;
+export const SIMULATION_TICKS_PER_GAME_DAY = 4;
+export const MAX_SIMULATION_TICKS_PER_FRAME = 8;
