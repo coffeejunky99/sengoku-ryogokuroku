@@ -24,6 +24,11 @@ export class SimulationClock {
     this.currentTimeScale = timeScale;
   }
 
+  public pauseAndClearAccumulator(): void {
+    this.currentTimeScale = 0;
+    this.currentAccumulatorMs = 0;
+  }
+
   public update(deltaMs: number): number {
     if (!Number.isFinite(deltaMs) || deltaMs < 0) {
       throw new RangeError('deltaMs must be a finite, non-negative number.');
