@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 
 import { gameBridge } from '../presentation/phaser/bridge/game-bridge';
+import { GameTimeControls } from '../presentation/react/components/GameTimeControls';
 import { PhaserGame } from '../presentation/react/components/PhaserGame';
 import { SelectedCastlePanel } from '../presentation/react/components/SelectedCastlePanel';
 import { useGameTimeLoop } from '../presentation/react/hooks/use-game-time-loop';
@@ -62,6 +63,7 @@ export function App() {
       {mapRenderDto === null ? null : (
         <PhaserGame bridge={gameBridge} mapRenderDto={mapRenderDto} />
       )}
+      <GameTimeControls />
       <SelectedCastlePanel castle={selectedCastle} />
     </main>
   );

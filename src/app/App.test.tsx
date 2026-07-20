@@ -18,6 +18,7 @@ vi.mock('../presentation/react/hooks/use-game-time-loop', () => ({
 
 describe('App', () => {
   beforeEach(() => {
+    useGameStore.getState().resetTime();
     useGameStore.setState({ initialized: false, mapDefinition: null });
     useUiStore.setState({ isBooted: false, selectedCastleId: null });
   });
@@ -28,6 +29,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: '戦国領国録' })).toBeInTheDocument();
     expect(screen.getByTestId('phaser-container')).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent('起動中');
+    expect(screen.getAllByTestId('game-time-controls')).toHaveLength(1);
     expect(screen.getByRole('heading', { name: '城を選択してください' })).toBeInTheDocument();
   });
 

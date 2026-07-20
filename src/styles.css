@@ -34,7 +34,7 @@ body {
 .app-shell {
   display: grid;
   height: 100dvh;
-  grid-template-rows: auto minmax(20rem, 1fr) auto;
+  grid-template-rows: auto minmax(20rem, 1fr) auto auto;
   gap: 1rem;
   max-width: 64rem;
   margin: 0 auto;
@@ -68,6 +68,81 @@ body {
 
 .phaser-container canvas {
   display: block;
+}
+
+.game-time-controls {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #6d644e;
+  border-radius: 0.5rem;
+  background: #171c18;
+}
+
+.game-time-readout {
+  display: flex;
+  min-width: 0;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.game-time-readout h2,
+.game-time-readout p {
+  margin: 0;
+}
+
+.game-time-date {
+  margin-top: 0.125rem;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.game-time-scale-status {
+  display: grid;
+  justify-items: end;
+  gap: 0.125rem;
+}
+
+.game-time-scale-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.time-scale-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.time-scale-button {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.25rem;
+  border: 1px solid #8c7f61;
+  border-radius: 0.375rem;
+  color: #f3ead4;
+  background: #252b26;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+.time-scale-button[aria-pressed="true"] {
+  border-color: #e1c77f;
+  color: #17130b;
+  background: #e1c77f;
+  box-shadow: inset 0 0 0 2px #fff3c9;
+}
+
+.time-scale-button:focus-visible {
+  outline: 3px solid #fff3c9;
+  outline-offset: 2px;
 }
 
 .selected-castle-panel {

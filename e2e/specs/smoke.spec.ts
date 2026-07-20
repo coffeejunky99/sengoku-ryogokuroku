@@ -68,3 +68,24 @@ test('selects a castle and shows its formal summary at a smartphone viewport', a
   await expect(panel.getByText('武田菱')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test('shows and changes the time scale at a smartphone viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  const controls = page.getByTestId('game-time-controls');
+  await expect(controls).toHaveCount(1);
+  await expect(controls.getByText('1561/09/01')).toBeVisible();
+  await expect(controls.getByRole('button', { name: '0倍速' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
+  await controls.getByRole('button', { name: '2倍速' }).click();
+
+  await expect(controls.getByRole('button', { name: '2倍速' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
