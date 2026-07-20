@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react';
 import { gameBridge } from '../presentation/phaser/bridge/game-bridge';
 import { PhaserGame } from '../presentation/react/components/PhaserGame';
 import { SelectedCastlePanel } from '../presentation/react/components/SelectedCastlePanel';
+import { useGameTimeLoop } from '../presentation/react/hooks/use-game-time-loop';
 import { useGameStore } from '../state/game-store';
 import {
   selectMapDefinition,
@@ -12,6 +13,8 @@ import {
 import { useUiStore } from '../state/ui-store';
 
 export function App() {
+  useGameTimeLoop();
+
   const mapDefinition = useGameStore(selectMapDefinition);
   const initializeMap = useGameStore((state) => state.initializeMap);
   const isBooted = useUiStore((state) => state.isBooted);

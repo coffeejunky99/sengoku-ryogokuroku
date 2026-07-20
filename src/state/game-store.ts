@@ -17,6 +17,7 @@ export interface GameStateStore {
   readonly pendingSimulationTicks: number;
   readonly initializeMap: () => void;
   readonly setTimeScale: (timeScale: TimeScale) => void;
+  readonly advanceTime: (deltaMs: number) => void;
   readonly consumeSimulationTicks: (ticks: number) => void;
   readonly resetTime: () => void;
 }
@@ -24,6 +25,22 @@ export interface GameStateStore {
 export const useGameStore = create<GameStateStore>((set, get) => {
   let simulationClock = new SimulationClock(INITIAL_TIME_SCALE);
   let gameDateProgression = new GameDateProgression();
+
+  const consumeTicks = (ticks: number): void => {
+    gameDateProgression.consumeSimulationTicks(ticks);
+
+    const state = get();
+    const currentDate = gameDateProgression.currentDate;
+    const pendingSimulationTicks = gameDateProgression.pendingSimulationTicks;
+    const dateChanged = !areGameDatesEqual(state.currentDate, currentDate);
+
+    if (dateChanged || state.pendingSimulationTicks !== pendingSimulationTicks) {
+      set({
+        currentDate: dateChanged ? currentDate : state.currentDate,
+        pendingSimulationTicks,
+      });
+    }
+  };
 
   return {
     initialized: false,
@@ -41,21 +58,15 @@ export const useGameStore = create<GameStateStore>((set, get) => {
         set({ timeScale: simulationClock.timeScale });
       }
     },
-    consumeSimulationTicks: (ticks) => {
-      gameDateProgression.consumeSimulationTicks(ticks);
+    advanceTime: (deltaMs) => {
+      simulationClock.setTimeScale(get().timeScale);
+      const ticks = simulationClock.update(deltaMs);
 
-      const state = get();
-      const currentDate = gameDateProgression.currentDate;
-      const pendingSimulationTicks = gameDateProgression.pendingSimulationTicks;
-      const dateChanged = !areGameDatesEqual(state.currentDate, currentDate);
-
-      if (dateChanged || state.pendingSimulationTicks !== pendingSimulationTicks) {
-        set({
-          currentDate: dateChanged ? currentDate : state.currentDate,
-          pendingSimulationTicks,
-        });
+      if (ticks > 0) {
+        consumeTicks(ticks);
       }
     },
+    consumeSimulationTicks: consumeTicks,
     resetTime: () => {
       simulationClock = new SimulationClock(INITIAL_TIME_SCALE);
       gameDateProgression = new GameDateProgression();
