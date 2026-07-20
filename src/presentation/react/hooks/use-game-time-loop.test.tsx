@@ -9,8 +9,12 @@ import { useGameTimeLoop } from './use-game-time-loop';
 const INITIAL_FRAME_TIMESTAMP_MS = 100;
 const SECOND_FRAME_DELTA_MS = 16;
 const THIRD_FRAME_DELTA_MS = 33;
+const FOREGROUND_FRAME_TIMESTAMP_MS = 10_000;
 
 const originalAdvanceTime = useGameStore.getState().advanceTime;
+const originalPauseForBackground = useGameStore.getState().pauseForBackground;
+
+let documentVisibilityState: DocumentVisibilityState;
 
 interface AnimationFrameMock {
   readonly request: ReturnType<typeof vi.fn<typeof requestAnimationFrame>>;
@@ -58,20 +62,55 @@ function installAnimationFrameMock(): AnimationFrameMock {
   };
 }
 
+function setDocumentVisibilityState(visibilityState: DocumentVisibilityState): void {
+  documentVisibilityState = visibilityState;
+  act(() => {
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
 describe('useGameTimeLoop', () => {
   let advanceTime: ReturnType<typeof vi.fn<(deltaMs: number) => void>>;
+  let pauseForBackground: ReturnType<typeof vi.fn<() => void>>;
 
   beforeEach(() => {
-    useGameStore.setState({ advanceTime: originalAdvanceTime });
+    documentVisibilityState = 'visible';
+    vi.spyOn(document, 'visibilityState', 'get').mockImplementation(
+      () => documentVisibilityState,
+    );
+    useGameStore.setState({
+      advanceTime: originalAdvanceTime,
+      pauseForBackground: originalPauseForBackground,
+    });
     useGameStore.getState().resetTime();
     advanceTime = vi.fn<(deltaMs: number) => void>();
-    useGameStore.setState({ advanceTime });
+    pauseForBackground = vi.fn<() => void>();
+    useGameStore.setState({ advanceTime, pauseForBackground });
   });
 
   afterEach(() => {
-    useGameStore.setState({ advanceTime: originalAdvanceTime });
+    useGameStore.setState({
+      advanceTime: originalAdvanceTime,
+      pauseForBackground: originalPauseForBackground,
+    });
     useGameStore.getState().resetTime();
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('registers a visibilitychange listener when mounted', () => {
+    const animationFrame = installAnimationFrameMock();
+    const addEventListener = vi.spyOn(document, 'addEventListener');
+
+    renderHook(() => {
+      useGameTimeLoop();
+    });
+
+    expect(addEventListener).toHaveBeenCalledWith(
+      'visibilitychange',
+      expect.any(Function),
+    );
+    expect(animationFrame.pendingCount()).toBe(1);
   });
 
   it('registers an animation frame when mounted', () => {
@@ -116,6 +155,83 @@ describe('useGameTimeLoop', () => {
     expect(advanceTime).toHaveBeenNthCalledWith(2, THIRD_FRAME_DELTA_MS);
   });
 
+  it('pauses once when hidden and does not advance while hidden', () => {
+    const animationFrame = installAnimationFrameMock();
+    renderHook(() => {
+      useGameTimeLoop();
+    });
+    act(() => {
+      animationFrame.runNextFrame(INITIAL_FRAME_TIMESTAMP_MS);
+    });
+    const callbackScheduledBeforeHidden = animationFrame.nextCallback();
+
+    setDocumentVisibilityState('hidden');
+    setDocumentVisibilityState('hidden');
+    act(() => {
+      callbackScheduledBeforeHidden(INITIAL_FRAME_TIMESTAMP_MS + SECOND_FRAME_DELTA_MS);
+    });
+
+    expect(pauseForBackground).toHaveBeenCalledOnce();
+    expect(advanceTime).not.toHaveBeenCalled();
+    expect(animationFrame.pendingCount()).toBe(0);
+  });
+
+  it('uses the first foreground frame only as a new timestamp baseline', () => {
+    const animationFrame = installAnimationFrameMock();
+    renderHook(() => {
+      useGameTimeLoop();
+    });
+    act(() => {
+      animationFrame.runNextFrame(INITIAL_FRAME_TIMESTAMP_MS);
+      animationFrame.runNextFrame(INITIAL_FRAME_TIMESTAMP_MS + SECOND_FRAME_DELTA_MS);
+    });
+
+    setDocumentVisibilityState('hidden');
+    setDocumentVisibilityState('visible');
+    act(() => {
+      animationFrame.runNextFrame(FOREGROUND_FRAME_TIMESTAMP_MS);
+    });
+
+    expect(advanceTime).toHaveBeenCalledOnce();
+    expect(advanceTime).toHaveBeenLastCalledWith(SECOND_FRAME_DELTA_MS);
+
+    act(() => {
+      animationFrame.runNextFrame(FOREGROUND_FRAME_TIMESTAMP_MS + THIRD_FRAME_DELTA_MS);
+    });
+
+    expect(advanceTime).toHaveBeenCalledTimes(2);
+    expect(advanceTime).toHaveBeenLastCalledWith(THIRD_FRAME_DELTA_MS);
+  });
+
+  it('keeps the store paused after returning to the foreground', () => {
+    const animationFrame = installAnimationFrameMock();
+    useGameStore.setState({ pauseForBackground: originalPauseForBackground });
+    useGameStore.getState().setTimeScale(4);
+    renderHook(() => {
+      useGameTimeLoop();
+    });
+
+    setDocumentVisibilityState('hidden');
+    setDocumentVisibilityState('visible');
+
+    expect(useGameStore.getState().timeScale).toBe(0);
+    expect(animationFrame.pendingCount()).toBe(1);
+  });
+
+  it('starts paused without scheduling a frame when mounted while hidden', () => {
+    const animationFrame = installAnimationFrameMock();
+    documentVisibilityState = 'hidden';
+
+    renderHook(() => {
+      useGameTimeLoop();
+    });
+
+    expect(pauseForBackground).toHaveBeenCalledOnce();
+    expect(advanceTime).not.toHaveBeenCalled();
+    expect(animationFrame.request).not.toHaveBeenCalled();
+    expect(animationFrame.pendingCount()).toBe(0);
+  });
+
   it('does not recreate the loop when rerendered', () => {
     const animationFrame = installAnimationFrameMock();
     const { rerender } = renderHook(() => {
@@ -128,8 +244,9 @@ describe('useGameTimeLoop', () => {
     expect(animationFrame.pendingCount()).toBe(1);
   });
 
-  it('cancels the scheduled animation frame when unmounted', () => {
+  it('removes the listener and cancels the scheduled frame when unmounted', () => {
     const animationFrame = installAnimationFrameMock();
+    const removeEventListener = vi.spyOn(document, 'removeEventListener');
     const { unmount } = renderHook(() => {
       useGameTimeLoop();
     });
@@ -138,6 +255,10 @@ describe('useGameTimeLoop', () => {
 
     expect(animationFrame.cancel).toHaveBeenCalledOnce();
     expect(animationFrame.pendingCount()).toBe(0);
+    expect(removeEventListener).toHaveBeenCalledWith(
+      'visibilitychange',
+      expect.any(Function),
+    );
   });
 
   it('does not update the store or reschedule after an unmounted callback runs', () => {

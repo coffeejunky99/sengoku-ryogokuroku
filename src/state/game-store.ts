@@ -19,6 +19,7 @@ export interface GameStateStore {
   readonly setTimeScale: (timeScale: TimeScale) => void;
   readonly advanceTime: (deltaMs: number) => void;
   readonly consumeSimulationTicks: (ticks: number) => void;
+  readonly pauseForBackground: () => void;
   readonly resetTime: () => void;
 }
 
@@ -67,6 +68,12 @@ export const useGameStore = create<GameStateStore>((set, get) => {
       }
     },
     consumeSimulationTicks: consumeTicks,
+    pauseForBackground: () => {
+      simulationClock.pauseAndClearAccumulator();
+      if (get().timeScale !== simulationClock.timeScale) {
+        set({ timeScale: simulationClock.timeScale });
+      }
+    },
     resetTime: () => {
       simulationClock = new SimulationClock(INITIAL_TIME_SCALE);
       gameDateProgression = new GameDateProgression();

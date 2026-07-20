@@ -62,6 +62,52 @@ describe('game store time state', () => {
     expect(useGameStore.getState().pendingSimulationTicks).toBe(0);
   });
 
+  it('pauses for background without changing the date or pending ticks', () => {
+    const pendingTicks = 1;
+    useGameStore.getState().setTimeScale(1);
+    useGameStore
+      .getState()
+      .consumeSimulationTicks(SIMULATION_TICKS_PER_GAME_DAY + pendingTicks);
+    useGameStore.getState().advanceTime(SIMULATION_STEP_MS - 1);
+    const dateBeforePause = useGameStore.getState().currentDate;
+
+    useGameStore.getState().pauseForBackground();
+
+    const state = useGameStore.getState();
+    expect(state.timeScale).toBe(0);
+    expect(state.currentDate).toEqual(dateBeforePause);
+    expect(state.pendingSimulationTicks).toBe(pendingTicks);
+  });
+
+  it('does not combine a post-background delta with the old accumulator', () => {
+    useGameStore.getState().setTimeScale(1);
+    useGameStore.getState().advanceTime(SIMULATION_STEP_MS - 1);
+
+    useGameStore.getState().pauseForBackground();
+    useGameStore.getState().setTimeScale(1);
+    useGameStore.getState().advanceTime(1);
+
+    expect(useGameStore.getState().currentDate).toEqual(INITIAL_GAME_DATE);
+    expect(useGameStore.getState().pendingSimulationTicks).toBe(0);
+  });
+
+  it('can pause for background repeatedly without changing time state', () => {
+    const pendingTicks = 1;
+    useGameStore.getState().setTimeScale(1);
+    useGameStore.getState().consumeSimulationTicks(pendingTicks);
+
+    useGameStore.getState().pauseForBackground();
+    const stateAfterFirstPause = useGameStore.getState();
+    useGameStore.getState().pauseForBackground();
+
+    const stateAfterSecondPause = useGameStore.getState();
+    expect(stateAfterSecondPause.timeScale).toBe(0);
+    expect(stateAfterSecondPause.currentDate).toEqual(stateAfterFirstPause.currentDate);
+    expect(stateAfterSecondPause.pendingSimulationTicks).toBe(
+      stateAfterFirstPause.pendingSimulationTicks,
+    );
+  });
+
   it('advances one day for every four simulation ticks', () => {
     useGameStore.getState().consumeSimulationTicks(SIMULATION_TICKS_PER_GAME_DAY);
 

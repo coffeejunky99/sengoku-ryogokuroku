@@ -59,6 +59,31 @@ describe('SimulationClock', () => {
     expect(clock.accumulatorMs).toBe(100);
   });
 
+  it('pauses and clears the accumulator used before a background transition', () => {
+    const clock = new SimulationClock(1);
+    expect(clock.update(SIMULATION_STEP_MS - 1)).toBe(0);
+
+    clock.pauseAndClearAccumulator();
+
+    expect(clock.timeScale).toBe(0);
+    expect(clock.accumulatorMs).toBe(0);
+
+    clock.setTimeScale(1);
+    expect(clock.update(1)).toBe(0);
+    expect(clock.accumulatorMs).toBe(1);
+  });
+
+  it('can pause and clear the accumulator repeatedly', () => {
+    const clock = new SimulationClock(1);
+    expect(clock.update(SIMULATION_STEP_MS - 1)).toBe(0);
+
+    clock.pauseAndClearAccumulator();
+    clock.pauseAndClearAccumulator();
+
+    expect(clock.timeScale).toBe(0);
+    expect(clock.accumulatorMs).toBe(0);
+  });
+
   it('limits one update to eight ticks and retains excess work', () => {
     const clock = new SimulationClock(1);
     const totalTicks = MAX_SIMULATION_TICKS_PER_FRAME + 2;
