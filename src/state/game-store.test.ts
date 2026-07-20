@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { SIMULATION_TICKS_PER_GAME_DAY } from '../domain/time/simulation-constants';
+import {
+  SIMULATION_STEP_MS,
+  SIMULATION_TICKS_PER_GAME_DAY,
+} from '../domain/time/simulation-constants';
 import type { TimeScale } from '../domain/time/time-scale';
 
 import { useGameStore } from './game-store';
@@ -9,6 +12,7 @@ const INITIAL_GAME_DATE = { year: 1561, month: 9, day: 1 };
 const INITIAL_TIME_SCALE: TimeScale = 0;
 const INITIAL_PENDING_SIMULATION_TICKS = 0;
 const AVAILABLE_TIME_SCALES: readonly TimeScale[] = [0, 1, 2, 4];
+const REAL_MILLISECONDS_PER_GAME_DAY = SIMULATION_STEP_MS * SIMULATION_TICKS_PER_GAME_DAY;
 const SEPTEMBER_DAYS = 30;
 
 describe('game store time state', () => {
@@ -28,6 +32,34 @@ describe('game store time state', () => {
     useGameStore.getState().setTimeScale(timeScale);
 
     expect(useGameStore.getState().timeScale).toBe(timeScale);
+  });
+
+  it('advances one day after 1000 ms at 1x', () => {
+    useGameStore.getState().setTimeScale(1);
+
+    useGameStore.getState().advanceTime(REAL_MILLISECONDS_PER_GAME_DAY);
+
+    expect(useGameStore.getState().currentDate).toEqual({ year: 1561, month: 9, day: 2 });
+    expect(useGameStore.getState().pendingSimulationTicks).toBe(0);
+  });
+
+  it('does not advance time at 0x', () => {
+    useGameStore.getState().advanceTime(REAL_MILLISECONDS_PER_GAME_DAY);
+
+    expect(useGameStore.getState().currentDate).toEqual(INITIAL_GAME_DATE);
+    expect(useGameStore.getState().pendingSimulationTicks).toBe(0);
+  });
+
+  it('discards the clock accumulator when time is reset', () => {
+    useGameStore.getState().setTimeScale(1);
+    useGameStore.getState().advanceTime(SIMULATION_STEP_MS - 1);
+
+    useGameStore.getState().resetTime();
+    useGameStore.getState().setTimeScale(1);
+    useGameStore.getState().advanceTime(1);
+
+    expect(useGameStore.getState().currentDate).toEqual(INITIAL_GAME_DATE);
+    expect(useGameStore.getState().pendingSimulationTicks).toBe(0);
   });
 
   it('advances one day for every four simulation ticks', () => {

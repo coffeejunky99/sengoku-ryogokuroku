@@ -12,6 +12,10 @@ vi.mock('../presentation/react/components/PhaserGame', () => ({
   PhaserGame: () => <div data-testid="phaser-container" />,
 }));
 
+vi.mock('../presentation/react/hooks/use-game-time-loop', () => ({
+  useGameTimeLoop: vi.fn(),
+}));
+
 describe('App', () => {
   beforeEach(() => {
     useGameStore.setState({ initialized: false, mapDefinition: null });
