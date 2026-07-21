@@ -1,11 +1,15 @@
 import { create } from 'zustand';
 
 import { GameDateProgression } from '../application/time/game-date-progression';
+import { shouldAutoPause } from '../application/time/should-auto-pause';
 import { SimulationClock } from '../application/time/simulation-clock';
+import type { AutoPauseReason } from '../domain/time/auto-pause';
 import type { GameDate } from '../domain/time/game-date';
 import type { TimeScale } from '../domain/time/time-scale';
 import type { MapDefinition } from '../domain/types/map-definition';
 import { loadMapDefinition } from '../infrastructure/data/load-map-definition';
+
+import { useSettingsStore } from './settings-store';
 
 const INITIAL_TIME_SCALE: TimeScale = 0;
 
@@ -15,11 +19,13 @@ export interface GameStateStore {
   readonly currentDate: GameDate;
   readonly timeScale: TimeScale;
   readonly pendingSimulationTicks: number;
+  readonly lastAutoPauseReason: AutoPauseReason | null;
   readonly initializeMap: () => void;
   readonly setTimeScale: (timeScale: TimeScale) => void;
   readonly advanceTime: (deltaMs: number) => void;
   readonly consumeSimulationTicks: (ticks: number) => void;
   readonly pauseForBackground: () => void;
+  readonly requestAutoPause: (reason: AutoPauseReason) => boolean;
   readonly resetTime: () => void;
 }
 
@@ -49,6 +55,7 @@ export const useGameStore = create<GameStateStore>((set, get) => {
     currentDate: gameDateProgression.currentDate,
     timeScale: simulationClock.timeScale,
     pendingSimulationTicks: gameDateProgression.pendingSimulationTicks,
+    lastAutoPauseReason: null,
     initializeMap: () => {
       const mapDefinition = loadMapDefinition();
       set({ initialized: true, mapDefinition });
@@ -74,6 +81,23 @@ export const useGameStore = create<GameStateStore>((set, get) => {
         set({ timeScale: simulationClock.timeScale });
       }
     },
+    requestAutoPause: (reason) => {
+      const settings = useSettingsStore.getState().autoPauseSettings;
+      if (!shouldAutoPause(settings, reason)) {
+        return false;
+      }
+
+      simulationClock.pauseAndClearAccumulator();
+      const state = get();
+      if (state.timeScale !== simulationClock.timeScale || state.lastAutoPauseReason !== reason) {
+        set({
+          timeScale: simulationClock.timeScale,
+          lastAutoPauseReason: reason,
+        });
+      }
+
+      return true;
+    },
     resetTime: () => {
       simulationClock = new SimulationClock(INITIAL_TIME_SCALE);
       gameDateProgression = new GameDateProgression();
@@ -81,6 +105,7 @@ export const useGameStore = create<GameStateStore>((set, get) => {
         currentDate: gameDateProgression.currentDate,
         timeScale: simulationClock.timeScale,
         pendingSimulationTicks: gameDateProgression.pendingSimulationTicks,
+        lastAutoPauseReason: null,
       });
     },
   };
